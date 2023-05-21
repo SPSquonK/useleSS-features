@@ -4,10 +4,12 @@
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 #include "rapidjson/reader.h"
-
-// Using Pimpl idiom for prototyping
+#include <format>
 
 const char * FindDstString(int nDstParam);
+
+///////////////////////////////////////////////////////////////////////////////
+// Grid Layout
 
 struct Node {
   CPoint point;
@@ -71,28 +73,48 @@ GridLayout GridLayout::FromJson(const rapidjson::GenericObject<false, rapidjson:
   return result;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+// Grid display
+
+// Using Pimpl idiom for prototyping
+
 class CWndGridImpl : public CWndSphereGrid::CWndGrid {
 
   void OnInitialUpdate() override;
   void OnDraw(C2DRender * p2DRender) override;
 
+  void OnRButtonUp(UINT nFlags, CPoint point) override;
+  void OnRButtonDown(UINT nFlags, CPoint point) override;
+  void OnMouseMove(UINT nFlags, CPoint point) override;
+
 private:
   GridLayout m_layout;
 
-  CPoint ConvertPoint(CPoint point);
+  [[nodiscard]] CPoint ConvertPoint(CPoint point) const;
 
+  CPoint m_center;
+  std::optional<CPoint> m_mouseMoveStart;
+  std::optional<CPoint> m_mouseMoveCurrent;
 
 };
 
-CPoint CWndGridImpl::ConvertPoint(CPoint point) {
-  point.x = (point.x + 4) * 64;
-  point.y = (point.y + 1) * 64;
+CPoint CWndGridImpl::ConvertPoint(CPoint point) const {
+  CPoint delta = m_center;
+  if (m_mouseMoveStart && m_mouseMoveCurrent) {
+    delta += m_mouseMoveCurrent.value() - m_mouseMoveStart.value();
+  }
+
+  point.x = point.x * 64 + delta.x;
+  point.y = point.y * 64 + delta.y;
   return point;
 }
 
 void CWndGridImpl::OnDraw(C2DRender * p2DRender) {
   p2DRender->RenderFillRect(CRect(CPoint(-5, -5), CSize(700, 700)), 0xFF00EECC);
   
+  std::string s = std::format("Center = {} {}", m_center.x, m_center.y);
+  p2DRender->TextOut(5, 5, s.c_str(), 0xFF0000FF);
 
   for (const Link & link : m_layout.links) {
     CPoint from = ConvertPoint(link.from);
@@ -137,6 +159,8 @@ void CWndGridImpl::OnDraw(C2DRender * p2DRender) {
 void CWndGridImpl::OnInitialUpdate() {
   CWndNeuz::OnInitialUpdate();
 
+  m_center = GetClientRect().CenterPoint();
+
   CScanner scanner;
   if (scanner.Load("SphereGrid.json")) {
     rapidjson::Document document;
@@ -157,7 +181,34 @@ void CWndGridImpl::OnInitialUpdate() {
 }
 
 
+#pragma region GridMoving
 
+void CWndGridImpl::OnRButtonUp(UINT nFlags, CPoint point) {
+  if (m_mouseMoveStart) {
+    const CPoint delta = point - m_mouseMoveStart.value();
+    m_center += delta;
+    m_mouseMoveStart = std::nullopt;
+    m_mouseMoveCurrent = std::nullopt;
+    ReleaseCapture();
+  }
+}
+
+void CWndGridImpl::OnRButtonDown(UINT nFlags, CPoint point) {
+  m_mouseMoveStart = point;
+  m_mouseMoveCurrent = point;
+  SetCapture();
+}
+
+void CWndGridImpl::OnMouseMove(UINT nFlags, CPoint point) {
+  if (m_mouseMoveStart) m_mouseMoveCurrent = point;
+}
+
+#pragma endregion
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Main window
 
 BOOL CWndSphereGrid::Initialize(CWndBase * pWndParent, DWORD nType) {
   return CWndNeuz::InitDialog(APP_SPHEREGRID, pWndParent, 0, CPoint(0, 0));
