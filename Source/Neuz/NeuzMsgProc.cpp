@@ -148,7 +148,7 @@ void InitGlobalVars( HINSTANCE hInstance )
 	
 	InitWebGlobalVar();					// WEB_ADDRESS_DEFAULT, WEB_POSTDATA¼³Á¤ 
 
-	if( ::GetLanguage() == LANG_FRE )
+	if( true )
 	{
 		g_Neuz.Key.chLeft	= 'Q';
 		g_Neuz.Key.chUp	= 'Z';

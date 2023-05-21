@@ -66,7 +66,7 @@ void CWndMgr::AddAllApplet() {
 	AddAppletFunc(WindowBuilder<CWndMap>          , APP_MAP                 , _T( "WndMap" )       , _T( "Icon_Applet.dds"    )    , GETTEXT(TID_TIP_MAP), 'M' );
 #endif // __IMPROVE_MAP_SYSTEM
 	
-	const char lordSkillPosition = ::GetLanguage() == LANG_FRE ? 'A' : 'L';
+	const char lordSkillPosition = true ? 'A' : 'L';
 	AddAppletFunc(WindowBuilder<CWndLordSkill>    , APP_LORD_SKILL             , _T( "WndLordSkill" )       , _T( "Icon_Infopang.dds"    )    , GETTEXT(TID_TIP_INFOPANG), lordSkillPosition);
 
 	AddAppletFunc(WindowBuilder<CWndInfoPang>     , APP_INFOPANG                , _T( "WndInfoPang" )       , _T( "Icon_Infopang.dds"    )    , GETTEXT(TID_TIP_INFOPANG), 0 );
@@ -132,7 +132,7 @@ void CWndMgr::AddAllApplet() {
 	AddAppletFunc(WindowBuilder<CWndPartyQuick>   , APP_PARTY_QUICK             , _T( "WndPartyQuick" )   , NULL   , GETTEXT( TID_TIP_DIALOG    ),  0  );
 	AddAppletFunc(WindowBuilder<CWndBuffStatus>   , APP_BUFF_STATUS             , _T( "WndBuffStatus" )   , NULL   , GETTEXT( TID_TIP_DIALOG    ),  0  );
 
-	const char theFrenchAreBack = ::GetLanguage() == LANG_FRE ? 'X' : 'F';
+	const char theFrenchAreBack = true ? 'X' : 'F';
 	AddAppletFunc(WindowBuilder<CWndCoupleManager>, APP_COUPLE_MAIN             , _T( "WndCoupleManager" )   , _T( "Icon_Couple.dds" )   , GETTEXT( TID_GAME_COUPLE ), theFrenchAreBack);
 
 	AddAppletFunc(WindowBuilder<CWnd2ndPassword>  , APP_2ND_PASSWORD_NUMBERPAD  , _T( "Wnd2ndPassword" )   , _T( "Icon_Applet.dds" )   , GETTEXT( TID_2ND_PASSWORD_WINDOW_OPEN ),  0  );
