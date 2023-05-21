@@ -35,7 +35,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='NoGameguard|Win32'">
     <OutDir>.\..\..\Output\Neuz\NoGameguard\</OutDir>
     <IntDir>.\..\..\Output\Neuz\NoGameguard\</IntDir>
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
     <IncludePath>.;..\..\Resource;..\_Multimedia;..\_DirectX;..\_Common;..\_Interface;..\_network\misc\include;..\_network;..\_network\mcl\include;..\_network\net\include;%(AdditionalIncludeDirectories);$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);..\DX_SDK;$(VC_IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='NoGameguard|Win32'">
@@ -52,7 +52,7 @@
       <ProgramDataBaseFileName>.\..\..\Output\Neuz\NoGameguard/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>false</ConformanceMode>
