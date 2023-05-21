@@ -244,7 +244,7 @@ void DbWorkerThread(HANDLE hIOCP, shared_ptr_timed_mutex mutex) {
 	IpAddressRecentFailChecker mgr;
 
 	CQuery query;
-	if (!query.Connect(3, "useless_account", "account", g_DbManager.m_szLoginPWD)) {
+	if (!query.Connect(3, "useless_sg_account", "account", g_DbManager.m_szLoginPWD)) {
 		AfxMessageBox("Error : Not Connect useless_account DB");
 	}
 

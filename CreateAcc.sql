@@ -1,4 +1,4 @@
-USE [USELESS_ACCOUNT_DBF]
+USE [USELESS_SG_ACCOUNT_DBF]
 GO
 
 -- Password is empty
