@@ -151,7 +151,7 @@ struct Selection {
 
 struct DisplayLayout {
   enum class DisplayMode {
-    Normal, Hovered
+    Normal, Hovered, ClickToCreate
   };
 
   static ColorSet GetColorSet(const DisplayMode dm) {
@@ -161,6 +161,12 @@ struct DisplayLayout {
           .background = 0xFFFFD0D0,
           .border = 0xFFFF0000,
           .text = 0xFFFF0000
+        };
+      case DisplayMode::ClickToCreate:
+        return ColorSet{
+          .background = 0xFFD0D0D0,
+          .border = 0xFF808080,
+          .text = 0xFF000000
         };
       case DisplayMode::Normal:
       default:
@@ -186,6 +192,7 @@ struct DisplayLayout {
     void Render(C2DRender * p2DRender, CPoint offset, DisplayMode displayMode) const;
   };
 
+  CD3DFont * m_pFont;
   std::vector<DisplayNode> nodes;
   std::vector<DisplayLink> links;
   Selection m_hovered;
@@ -197,18 +204,22 @@ struct DisplayLayout {
 
   void Render(C2DRender * p2DRender, CPoint offset) const;
 
+  void OnClick();
+
 };
 
 void DisplayLayout::Update(CD3DFont * pFont, const GridLayout & gridLayout) {
   nodes.clear();
   links.clear();
+  
+  m_pFont = pFont;
 
   for (const Link & link : gridLayout.links) {
     links.emplace_back(link);
   }
 
   for (const Node & node : gridLayout.nodes) {
-    CRect rect = DisplayNode::ComputeRect(pFont, node);
+    CRect rect = DisplayNode::ComputeRect(m_pFont, node);
     nodes.emplace_back(DisplayNode{ node, rect });
   }
 
@@ -235,25 +246,69 @@ void DisplayLayout::SetHovered(std::optional<CPoint> point) {
   // On a link
   CPoint topLeftPoint = CPoint((16 + point->x) / 32, (16 + point->y) / 32);
 
-  const bool xOnLink = (topLeftPoint.x & 1) == 1;
-  const bool yOnLink = (topLeftPoint.y & 1) == 1;
+  static constexpr auto Round2 = [](const int value) -> std::pair<bool, int> {
+    const bool onLink = value & 1;
+    if (value < 0) {
+      return { onLink, value / 2 };
+    } else {
+      return { onLink, value / 2 };
+    }
+  };
+
+  const auto [xOnLink, xInGridPoint] = Round2(topLeftPoint.x);
+  const auto [yOnLink, yInGridPoint] = Round2(topLeftPoint.y);
+
+  CPoint inGridPoint = CPoint(xInGridPoint, yInGridPoint);
 
   if (xOnLink && yOnLink) {
     m_hovered = Selection{ std::nullopt, std::nullopt };
-    return;
-  }
-
-  CPoint nodePoint = CPoint(topLeftPoint.x / 2, topLeftPoint.y / 2);
-
-  if (topLeftPoint.x < 0) nodePoint.x -= 1;
-  if (topLeftPoint.y < 0) nodePoint.y -= 1;
-
-  if (!xOnLink && !yOnLink) {
-    m_hovered = Selection{ nodePoint, std::nullopt };
+  } else if (!xOnLink && !yOnLink) {
+    m_hovered = Selection{ inGridPoint, std::nullopt };
   } else if (xOnLink) {
-    m_hovered = Selection{ nodePoint, nodePoint + CPoint(1, 0) };
+    m_hovered = Selection{ inGridPoint, inGridPoint + CPoint(1, 0) };
   } else /* (yOnLink) */ {
-    m_hovered = Selection{ nodePoint, nodePoint + CPoint(0, 1) };
+    m_hovered = Selection{ inGridPoint, inGridPoint + CPoint(0, 1) };
+  }
+}
+
+void DisplayLayout::OnClick() {
+  if (!m_hovered.point1) return;
+
+  if (!m_hovered.point2) {
+    const auto itNode = std::find_if(
+      nodes.begin(), nodes.end(),
+      [&](const DisplayNode & node) { return m_hovered.IsOn(node); }
+    );
+
+    static constexpr auto cycle = std::array<int, 4>{ DST_STR, DST_STA, DST_DEX, DST_INT };
+
+    if (itNode != nodes.end()) {
+      if (!itNode->content) return; // Can not delete the starting node
+
+      const auto itCycle = std::find(cycle.begin(), cycle.end(), *itNode->content);
+
+      if (itCycle == cycle.end()) return;
+      if (itCycle + 1 == cycle.end()) {
+        nodes.erase(itNode);
+      } else {
+        (*itNode->content) = *(itCycle + 1);
+      }
+    } else {
+      const Node newNode = Node{ *m_hovered.point1, std::optional<int>(cycle[0]) };
+      CRect rect = DisplayNode::ComputeRect(m_pFont, newNode);
+      nodes.emplace_back(DisplayNode{ newNode, rect });
+    }
+  } else {
+    // Link
+    const auto it = std::find_if(links.begin(), links.end(),
+      [&](const DisplayLink & link) { return m_hovered.IsOn(link); }
+      );
+
+    if (it != links.end()) {
+      links.erase(it);
+    } else {
+      links.emplace_back(DisplayLink{ Link { *m_hovered.point1, *m_hovered.point2 } });
+    }
   }
 }
 
@@ -271,6 +326,8 @@ std::pair<const char *, CSize> DisplayLayout::DisplayNode::GetTextContent(
 ) {
   const char * text;
   if (node.content) {
+    if (node.content.value() == 0) return std::pair("", CSize(0, 0));
+
     text = FindDstString(node.content.value());
   } else {
     text = "Start";
@@ -293,21 +350,27 @@ void DisplayLayout::Render(C2DRender * p2DRender, CPoint offset) const {
 
   if (!seenHoveredLink && m_hovered.point2) {
     DisplayLink{ Link { *m_hovered.point1, *m_hovered.point2 } }
-    .Render(p2DRender, offset, DisplayLayout::DisplayMode::Hovered);
+    .Render(p2DRender, offset, DisplayLayout::DisplayMode::ClickToCreate);
   }
 
+  bool seenHoveredNode = false;
   for (const DisplayLayout::DisplayNode & node : nodes) {
     const bool hovered = m_hovered.IsOn(node);
+    seenHoveredNode |= hovered;
     node.Render(p2DRender, offset, 
       hovered ? DisplayLayout::DisplayMode::Hovered :
       DisplayMode::Normal
     );
   }
+
+  if (!seenHoveredNode && m_hovered.point1 && !m_hovered.point2) {
+    const auto node = Node{ *m_hovered.point1, std::optional<int>(0) };
+    const auto dNode = DisplayNode{ node, DisplayNode::ComputeRect(m_pFont, node) };
+    dNode.Render(p2DRender, offset, DisplayMode::ClickToCreate);
+  }
 }
 
 void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, DisplayLayout::DisplayMode displayMode) const {
-  const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
-
   const ColorSet colors = GetColorSet(displayMode);
 
   CRect rect = this->rect;
@@ -322,8 +385,11 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
     p2DRender->RenderRect(copy, colors.border);
   }
 
-  CPoint where = CPoint(point.x * 64, point.y * 64) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
-  p2DRender->TextOut(where.x, where.y, text, colors.text);
+  if (displayMode != DisplayMode::ClickToCreate) {
+    const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
+    CPoint where = CPoint(point.x * 64, point.y * 64) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
+    p2DRender->TextOut(where.x, where.y, text, colors.text);
+  }
 }
 
 void DisplayLayout::DisplayLink::Render(C2DRender * p2DRender, CPoint offset, DisplayLayout::DisplayMode displayMode) const {
@@ -349,6 +415,7 @@ public:
   void OnInitialUpdate() override;
   void OnDraw(C2DRender * p2DRender) override;
 
+  void OnLButtonDown(UINT nFlags, CPoint point) override;
   void OnRButtonUp(UINT nFlags, CPoint point) override;
   void OnRButtonDown(UINT nFlags, CPoint point) override;
   void OnMouseMove(UINT nFlags, CPoint point) override;
@@ -456,6 +523,9 @@ void CWndGridImpl::OnMouseMove(UINT nFlags, CPoint point) {
 
 #pragma endregion
 
+void CWndGridImpl::OnLButtonDown(UINT nFlags, CPoint point) {
+  m_displayLayout.OnClick();
+}
 
 void CWndGridImpl::OnMButtonUp(UINT, CPoint) {
   g_WndMng.PutString("Hey catch this!");
