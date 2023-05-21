@@ -4,7 +4,9 @@
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 #include "rapidjson/reader.h"
+#include "rapidjson/writer.h"
 #include <format>
+#include "Clipboard.h"
 
 const char * FindDstString(int nDstParam);
 
@@ -26,7 +28,7 @@ struct GridLayout {
   std::vector<Link> links;
 
   static GridLayout FromJson(const rapidjson::GenericObject<false, rapidjson::Value>::ValueType & document);
-
+  [[nodiscard]] std::string ToJson() const;
 
 };
 
@@ -73,6 +75,51 @@ GridLayout GridLayout::FromJson(const rapidjson::GenericObject<false, rapidjson:
   return result;
 }
 
+std::string GridLayout::ToJson() const {
+  rapidjson::StringBuffer s;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+  writer.StartObject();
+
+  writer.Key("nodes");
+  writer.StartArray();
+  for (const Node & node : nodes) {
+    if (!node.content) continue;
+
+    writer.StartObject();
+
+    writer.Key("x"); writer.Int(node.point.x);
+    writer.Key("y"); writer.Int(node.point.y);
+
+    writer.Key("stat");
+    const CString * statName = CScript::m_defines.Lookup(node.content.value(), "DST_");
+    if (!statName) return "Invalid layout";
+    writer.String(statName->GetString());
+
+    writer.EndObject();
+  }
+  writer.EndArray();
+
+  writer.Key("links");
+  writer.StartArray();
+  for (const Link & link : links) {
+    writer.StartObject();
+
+    if (link.from.x != link.to.x) {
+      writer.Key("x1"); writer.Int(link.from.x);
+      writer.Key("x2"); writer.Int(link.to.x);
+      writer.Key("y"); writer.Int(link.from.y);
+    } else {
+      writer.Key("x"); writer.Int(link.from.x);
+      writer.Key("y1"); writer.Int(link.from.y);
+      writer.Key("y2"); writer.Int(link.to.y);
+    }
+
+    writer.EndObject();
+  }
+  writer.EndArray();
+
+  return std::string(s.GetString());
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Grid display
@@ -87,6 +134,10 @@ class CWndGridImpl : public CWndSphereGrid::CWndGrid {
   void OnRButtonUp(UINT nFlags, CPoint point) override;
   void OnRButtonDown(UINT nFlags, CPoint point) override;
   void OnMouseMove(UINT nFlags, CPoint point) override;
+  void OnMButtonUp(UINT nFlags, CPoint point) override;
+
+  // BOOL OnChildNotify(UINT message, UINT nID, LRESULT * pLResult) override;
+
 
 private:
   GridLayout m_layout;
@@ -96,6 +147,7 @@ private:
   CPoint m_center;
   std::optional<CPoint> m_mouseMoveStart;
   std::optional<CPoint> m_mouseMoveCurrent;
+
 
 };
 
@@ -205,6 +257,17 @@ void CWndGridImpl::OnMouseMove(UINT nFlags, CPoint point) {
 
 #pragma endregion
 
+
+void CWndGridImpl::OnMButtonUp(UINT, CPoint) {
+  g_WndMng.PutString("Hey catch this!");
+
+  std::string json = m_layout.ToJson();
+
+  g_WndMng.PutString(json.c_str());
+  g_WndMng.PutString("Now you just have to run some OCR program on the text!");
+
+  CClipboard::SetText(json.c_str());
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
