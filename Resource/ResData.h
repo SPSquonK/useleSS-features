@@ -489,6 +489,7 @@
 #define APP_EMOTION             1008
 #define APP_ENCHANT             492
 #define APP_EQUIPMENT             1002
+#define APP_EQUIPMENT_SEX             2023
 #define APP_EQUIP_BIND_CONFIRM             832
 #define APP_EXINVENTORY             497
 #define APP_EXSHOP             455
@@ -793,6 +794,7 @@
 #define APP_SKILLKNIGHT_BACK             434
 #define APP_SKILLPHY_BACK             436
 #define APP_SKILLRING_BACK             438
+#define APP_SKILL_V16             2024
 #define APP_SMELT_CHANGEWEAPON             640
 #define APP_SMELT_EXTRACTION             636
 #define APP_SMELT_JEWEL             638
@@ -849,8 +851,7 @@
 #define APP_WNDPETRES             686
 #define APP_WORLD             2002
 #define APP_WORLDMAP_HELPER             868
-#define APP_EQUIPMENT_SEX 2023
-#define APP_SKILL_V16 2024
+#define APP_SPHEREGRID             2025
 
 // Control Id
 #define WIDC_2ND_PASSWORD             865
@@ -916,6 +917,7 @@
 #define WIDC_BUFFPET_SLOT7             1293
 #define WIDC_BUFFPET_SLOT8             1296
 #define WIDC_BUFFPET_SLOT9             1294
+#define WIDC_BUTTON             2040
 #define WIDC_BUTTON1             933
 #define WIDC_BUTTON10             1069
 #define WIDC_BUTTON11             1076
@@ -962,6 +964,11 @@
 #define WIDC_BUTTON_7             1325
 #define WIDC_BUTTON_8             1326
 #define WIDC_BUTTON_9             1327
+#define WIDC_BUTTON_BACK             2025
+#define WIDC_BUTTON_C1             2026
+#define WIDC_BUTTON_C2             2027
+#define WIDC_BUTTON_C3             2028
+#define WIDC_BUTTON_C4             2029
 #define WIDC_BUTTON_CANCEL             933
 #define WIDC_BUTTON_CANCEL2             889
 #define WIDC_BUTTON_CANCLE             921
@@ -1020,6 +1027,7 @@
 #define WIDC_CLEAR             373
 #define WIDC_CLOSE             163
 #define WIDC_COLLISION             610
+#define WIDC_COMBOBOX             2041
 #define WIDC_COMBOBOX1             928
 #define WIDC_COMBOBOX2             490
 #define WIDC_COMBOBOX3             478
@@ -1065,6 +1073,7 @@
 #define WIDC_CULLOBJ             609
 #define WIDC_CURRENTMEMBER             777
 #define WIDC_CURRENT_PRESENT             872
+#define WIDC_CUSTOM             2042
 #define WIDC_CUSTOM1             870
 #define WIDC_CUSTOM10             1119
 #define WIDC_CUSTOM11             1120
@@ -1480,11 +1489,18 @@
 #define WIDC_STATIC9             865
 #define WIDC_STATIC_2ND_PASSWORD_TEXT             866
 #define WIDC_STATIC_BLUE             865
+#define WIDC_STATIC_C1             2032
+#define WIDC_STATIC_C2             2033
+#define WIDC_STATIC_C3             2034
+#define WIDC_STATIC_C4             2035
+#define WIDC_STATIC_CLASSNAME             2030
 #define WIDC_STATIC_COM             936
 #define WIDC_STATIC_COM1             872
 #define WIDC_STATIC_DICE             929
 #define WIDC_STATIC_GREEN             866
+#define WIDC_STATIC_HERO             2039
 #define WIDC_STATIC_ID             925
+#define WIDC_STATIC_MASTER             2038
 #define WIDC_STATIC_MEM1             929
 #define WIDC_STATIC_MEM10             1244
 #define WIDC_STATIC_MEM11             1245
@@ -1498,6 +1514,8 @@
 #define WIDC_STATIC_MEM9             1243
 #define WIDC_STATIC_MY             900
 #define WIDC_STATIC_MY1             867
+#define WIDC_STATIC_NEEDSP             2036
+#define WIDC_STATIC_PANNEL             2031
 #define WIDC_STATIC_PIERCING1             936
 #define WIDC_STATIC_PIERCING10             1195
 #define WIDC_STATIC_PIERCING2             867
@@ -1512,8 +1530,10 @@
 #define WIDC_STATIC_REQUEST             929
 #define WIDC_STATIC_SERVER             927
 #define WIDC_STATIC_SEX             929
+#define WIDC_STATIC_SP             2037
 #define WIDC_STATIC_TARGETNAME             862
 #define WIDC_STATIC_WANTED             886
+#define WIDC_TABCTRL             2043
 #define WIDC_TABCTRL1             934
 #define WIDC_TABCTRL2             1222
 #define WIDC_TABCTRL3             1220
@@ -1571,20 +1591,5 @@
 #define WIDC_WORD_NUM5             872
 #define WIDC_X             889
 #define WIDC_YES             101
-#define WIDC_BUTTON_BACK             2025
-#define WIDC_BUTTON_C1          2026
-#define WIDC_BUTTON_C2          2027
-#define WIDC_BUTTON_C3              2028
-#define WIDC_BUTTON_C4          2029
-#define WIDC_STATIC_CLASSNAME           2030
-#define WIDC_STATIC_PANNEL              2031
-#define WIDC_STATIC_C1          2032
-#define WIDC_STATIC_C2          2033
-#define WIDC_STATIC_C3           2034
-#define WIDC_STATIC_C4           2035
-#define WIDC_STATIC_NEEDSP          2036
-#define WIDC_STATIC_SP          2037
-#define WIDC_STATIC_MASTER          2038
-#define WIDC_STATIC_HERO            2039
 
 #endif

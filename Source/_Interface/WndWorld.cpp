@@ -47,6 +47,7 @@
 
 #include "Campus.h"
 #include "CampusHelper.h"
+#include "WndSphereGrid.h"
 
 #ifdef __IMPROVE_MAP_SYSTEM
 #include "WndMapEx.h"

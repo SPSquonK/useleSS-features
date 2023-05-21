@@ -1,0 +1,12 @@
+{
+	"Rising Tides": {
+    "nodes": [
+      { "x": 0, "y": 1, "stat": "DST_STR" },
+      { "x": 1, "y": 1, "stat": "DST_STA" }
+    ],
+    "links": [
+      { "x": 0, "y1": 0, "y2": 1 },
+      { "x1": 0, "x2": 1, "y": 1 }
+    ]
+  }
+}

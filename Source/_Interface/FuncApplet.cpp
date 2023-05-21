@@ -30,6 +30,7 @@
 #include "Wnd2ndPassword.h"
 #include "WndEquipmentSex.h"
 #include "WndSkillTree.h"
+#include "WndSphereGrid.h"
 
 #ifdef __NEW_WEB_BOX
 #include "WndHelperWebBox.h"
@@ -72,7 +73,7 @@ void CWndMgr::AddAllApplet() {
 	AddAppletFunc(WindowBuilder<CWndInfoPang>     , APP_INFOPANG                , _T( "WndInfoPang" )       , _T( "Icon_Infopang.dds"    )    , GETTEXT(TID_TIP_INFOPANG), 0 );
 	AddAppletFunc(WindowBuilder<CWndHousing>      , APP_HOUSING                , _T( "WndHousing" )       , _T( "Icon_Housing.dds"    )    , GETTEXT(TID_GAME_HOUSING_BOX), 'Y' );
 
-	AddAppletFunc(WindowBuilder<CWndGuildHousing> , APP_GH_FURNITURE_STORAGE, _T( "WndGuildHousing" )     , _T( "Icon_Housing.dds"    )    , GETTEXT(TID_GAME_HOUSING_BOX), 'R' );
+	AddAppletFunc(WindowBuilder<CWndGuildHousing> , APP_GH_FURNITURE_STORAGE, _T( "WndGuildHousing" )     , _T( "Icon_Housing.dds"    )    , GETTEXT(TID_GAME_HOUSING_BOX), 0 );
 	AddAppletFunc(WindowBuilder<CWndCharacter>    , APP_CHARACTER3               , _T( "WndCharacter" )    , _T( "Icon_Character.dds" )    , GETTEXT( TID_TIP_CHARACTER      ), 'H' );
 	AddAppletFunc(WindowBuilder<CWndInventory>    , APP_INVENTORY               , _T( "WndInventory" )    , _T( "Icon_Inventory.dds" )    , GETTEXT( TID_TIP_INVENTORY      ), 'I' );
 	
@@ -141,4 +142,5 @@ void CWndMgr::AddAllApplet() {
 #endif // __NEW_WEB_BOX
 
 	AddAppletFunc(WindowBuilder<CWndEquipmentSex>, APP_EQUIPMENT_SEX, _T("EquipmentSex"), _T("Icon_Applet.dds"), "Equipement Sex", 0);
+	AddAppletFunc(WindowBuilder<CWndSphereGrid>, APP_SPHEREGRID, _T("RikkuIsBestGirl"), _T("Icon_Applet.dds"), "Sphere Grid", 'R');
 }

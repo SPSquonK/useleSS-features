@@ -36,6 +36,7 @@
 
 #include "couplehelper.h"
 #include "FuncTextCmd.h"
+#include "WndSphereGrid.h"
 
 #ifdef __Y_INTERFACE_VER3
 #include "WorldMap.h"

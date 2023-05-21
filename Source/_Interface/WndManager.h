@@ -85,6 +85,7 @@ class CWndGuildBank;
 class CWndGuildNickName;
 class CWndCommercialElem; class CWndRemoveElem;
 class CWndReSkillWarning;
+class CWndSphereGrid;
 
 #define REG_VERSION 1
 
@@ -403,6 +404,8 @@ namespace WndMgr {
 		CWndLogOutWaitting * m_pLogOutWaitting = nullptr;
 		CWndCommItemDlg * m_pWndCommItemDlg = nullptr;
 		CWndChangeClass1 * m_pWndChangeClass1 = nullptr;
+
+		CWndSphereGrid * m_pWndSphereGrid = nullptr;
 	};
 
 	/// List of all functions formely in CWndMgr that are used to update the
