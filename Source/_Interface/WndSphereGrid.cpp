@@ -154,6 +154,9 @@ struct DisplayLayout {
     Normal, Hovered, ClickToCreate
   };
 
+  // Computes dividend / divisor, but floors the result. Assumes divisor > 0.
+  [[nodiscard]] static int DivideFloor(int dividend, int divisor);
+
   static ColorSet GetColorSet(const DisplayMode dm) {
     switch (dm) {
       case DisplayMode::Hovered:
@@ -206,6 +209,8 @@ struct DisplayLayout {
 
   void OnClick();
 
+  // Find the thing the point is (supposed to be) on
+  static Selection GetSelection(CPoint point);
 };
 
 void DisplayLayout::Update(CD3DFont * pFont, const GridLayout & gridLayout) {
@@ -228,10 +233,7 @@ void DisplayLayout::Update(CD3DFont * pFont, const GridLayout & gridLayout) {
 }
 
 void DisplayLayout::SetHovered(std::optional<CPoint> point) {
-  if (point == std::nullopt) {
-    m_hovered = Selection{ std::nullopt, std::nullopt };
-    return;
-  }
+  m_hovered = point.transform(GetSelection).value_or(Selection{ std::nullopt, std::nullopt });
 
   /*
   * Only select real nodes
@@ -242,34 +244,42 @@ void DisplayLayout::SetHovered(std::optional<CPoint> point) {
     }
   }
   */
+}
 
-  // On a link
-  CPoint topLeftPoint = CPoint((16 + point->x) / 32, (16 + point->y) / 32);
-
-  static constexpr auto Round2 = [](const int value) -> std::pair<bool, int> {
-    const bool onLink = value & 1;
+Selection DisplayLayout::GetSelection(const CPoint point) {
+  constexpr auto FindPositionOnAxis = [](const int value) -> std::pair<bool, int> {
     if (value < 0) {
-      return { onLink, value / 2 };
+      return { value & 1, (value - 1) / 2 };
     } else {
-      return { onLink, value / 2 };
+      return { value & 1, value / 2 };
     }
   };
 
-  const auto [xOnLink, xInGridPoint] = Round2(topLeftPoint.x);
-  const auto [yOnLink, yInGridPoint] = Round2(topLeftPoint.y);
+  CPoint topLeftPoint = CPoint(DivideFloor(16 + point.x, 32), DivideFloor(16 + point.y, 32));
+
+  const auto [xOnLink, xInGridPoint] = FindPositionOnAxis(topLeftPoint.x);
+  const auto [yOnLink, yInGridPoint] = FindPositionOnAxis(topLeftPoint.y);
 
   CPoint inGridPoint = CPoint(xInGridPoint, yInGridPoint);
 
   if (xOnLink && yOnLink) {
-    m_hovered = Selection{ std::nullopt, std::nullopt };
+    return Selection{ std::nullopt, std::nullopt };
   } else if (!xOnLink && !yOnLink) {
-    m_hovered = Selection{ inGridPoint, std::nullopt };
+    return Selection{ inGridPoint, std::nullopt };
   } else if (xOnLink) {
-    m_hovered = Selection{ inGridPoint, inGridPoint + CPoint(1, 0) };
+    return Selection{ inGridPoint, inGridPoint + CPoint(1, 0) };
   } else /* (yOnLink) */ {
-    m_hovered = Selection{ inGridPoint, inGridPoint + CPoint(0, 1) };
+    return Selection{ inGridPoint, inGridPoint + CPoint(0, 1) };
   }
 }
+
+int DisplayLayout::DivideFloor(int dividend, int divisor) {
+  if (dividend < 0 && dividend % divisor != 0) {
+    return dividend / divisor - 1;
+  } else {
+    return dividend / divisor;
+  }
+};
 
 void DisplayLayout::OnClick() {
   if (!m_hovered.point1) return;
@@ -460,10 +470,6 @@ void CWndGridImpl::OnDraw(C2DRender * p2DRender) {
   std::string s = "Center = " + FormatPoint(m_center)
     + " ; Hovered = " + FormatOptPoint(m_displayLayout.m_hovered.point1)
     + "/" + FormatOptPoint(m_displayLayout.m_hovered.point2);
-
-
-
-
 
   p2DRender->TextOut(5, 5, s.c_str(), 0xFF0000FF);
 

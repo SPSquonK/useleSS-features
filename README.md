@@ -18,7 +18,6 @@ Sphere grid.
 
 - Window
  - Editing tab layout
-    - Fix hovering for negative values
     - Save the modified layout
     - Being able to place skills in layout
   - Grid progression
