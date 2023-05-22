@@ -17,8 +17,20 @@ const char * FindDstString(int nDstParam);
 // Grid Layout
 
 struct Node {
+  struct StartNode {};
+  struct Empty {};
+  struct DST { int dst; };
+  struct Skill { DWORD skillId; };
+
+  using ContentType = std::variant<
+    Empty,
+    StartNode,
+    DST,
+    Skill
+  >;
+
   CPoint point;
-  std::optional<int> content;
+  ContentType content;
 };
 
 struct Link {
@@ -41,13 +53,20 @@ GridLayout GridLayout::FromJson(const rapidjson::GenericObject<false, rapidjson:
 	try {
     const auto & jsonNodes = fullLayout.FindMember("nodes")->value.GetArray();
 
-    result.nodes.emplace_back(Node{ CPoint(0, 0), std::nullopt });
+    result.nodes.emplace_back(Node{ CPoint(0, 0), Node::StartNode{} });
 
     for (const rapidjson::Value & jsonNode : jsonNodes) {
       Node node;
       node.point.x = jsonNode.FindMember("x")->value.GetInt();
       node.point.y = jsonNode.FindMember("y")->value.GetInt();
-      node.content = CScript::GetDefineNumOpt(jsonNode.FindMember("stat")->value.GetString()).value();
+
+      if (jsonNode.HasMember("stat")) {
+        const DWORD dstId = CScript::GetDefineNumOpt(jsonNode.FindMember("stat")->value.GetString()).value();
+        node.content = Node::DST{ static_cast<int>(dstId) };
+      } else if (jsonNode.HasMember("skill")) {
+        const DWORD skillId = CScript::GetDefineNumOpt(jsonNode.FindMember("skill")->value.GetString()).value();
+        node.content = Node::Skill(skillId);
+      }
 
       result.nodes.emplace_back(node);
     }
@@ -86,17 +105,24 @@ std::string GridLayout::ToJson() const {
   writer.Key("nodes");
   writer.StartArray();
   for (const Node & node : nodes) {
-    if (!node.content) continue;
+    if (std::holds_alternative<Node::StartNode>(node.content)) continue;
 
     writer.StartObject();
 
     writer.Key("x"); writer.Int(node.point.x);
     writer.Key("y"); writer.Int(node.point.y);
 
-    writer.Key("stat");
-    const CString * statName = CScript::m_defines.Lookup(node.content.value(), "DST_");
-    if (!statName) return "Invalid layout";
-    writer.String(statName->GetString());
+    if (const Node::DST * dstContent = std::get_if<Node::DST>(&node.content)) {
+      writer.Key("stat");
+      const CString * statName = CScript::m_defines.Lookup(dstContent->dst, "DST_");
+      if (!statName) return "Invalid layout";
+      writer.String(statName->GetString());
+    } else if (const Node::Skill * skillContent = std::get_if<Node::Skill>(&node.content)) {
+      writer.Key("skill");
+      const CString * statName = CScript::m_defines.Lookup(skillContent->skillId, "SI_");
+      if (!statName) return "Invalid layout";
+      writer.String(statName->GetString());
+    }
 
     writer.EndObject();
   }
@@ -185,9 +211,16 @@ struct DisplayLayout {
 
   struct DisplayNode : public Node {
     CRect rect;
+    mutable std::optional<CTexture *> texture = std::nullopt;
 
     void Render(C2DRender * p2DRender, CPoint offset, DisplayMode displayMode) const;
+    void KillCache() {
+      texture = std::nullopt;
+    }
 
+    static DisplayNode FromNode(const Node & node, CD3DFont * pFont);
+
+  private:
     static CRect ComputeRect(CD3DFont * pFont, const Node & node);
     static std::pair<const char *, CSize> GetTextContent(CD3DFont * pFont, const Node & node);
   };
@@ -209,6 +242,7 @@ struct DisplayLayout {
   void Render(C2DRender * p2DRender, CPoint offset) const;
 
   void OnClick();
+  bool PlaceSkill(DWORD skillId);
 
   // Find the thing the point is (supposed to be) on
   static Selection GetSelection(CPoint point);
@@ -225,12 +259,17 @@ void DisplayLayout::Update(CD3DFont * pFont, const GridLayout & gridLayout) {
   }
 
   for (const Node & node : gridLayout.nodes) {
-    CRect rect = DisplayNode::ComputeRect(m_pFont, node);
-    nodes.emplace_back(DisplayNode{ node, rect });
+    nodes.emplace_back(DisplayNode::FromNode(node, m_pFont));
   }
 
   m_hovered = Selection{ std::nullopt, std::nullopt };
   m_selected = Selection{ std::nullopt, std::nullopt };
+}
+
+
+DisplayLayout::DisplayNode DisplayLayout::DisplayNode::FromNode(const Node & node, CD3DFont * pFont) {
+  const CRect rect = DisplayNode::ComputeRect(pFont, node);
+  return DisplayNode{ node, rect };
 }
 
 void DisplayLayout::SetHovered(std::optional<CPoint> point) {
@@ -294,20 +333,37 @@ void DisplayLayout::OnClick() {
     static constexpr auto cycle = std::array<int, 4>{ DST_STR, DST_STA, DST_DEX, DST_INT };
 
     if (itNode != nodes.end()) {
-      if (!itNode->content) return; // Can not delete the starting node
+      // Can not delete the starting node
+      if (std::holds_alternative<Node::StartNode>(itNode->content)) return;
 
-      const auto itCycle = std::find(cycle.begin(), cycle.end(), *itNode->content);
+      std::optional<int> newDst;
 
-      if (itCycle == cycle.end()) return;
-      if (itCycle + 1 == cycle.end()) {
-        nodes.erase(itNode);
+      if (std::holds_alternative<Node::Empty>(itNode->content)) {
+        newDst = std::nullopt;
+      } else if (std::holds_alternative<Node::Empty>(itNode->content)) {
+        newDst = std::nullopt;
+      } else if (const Node::DST * dst = std::get_if<Node::DST>(&itNode->content)) {
+
+        const auto itCycle = std::find(cycle.begin(), cycle.end(), dst->dst);
+
+        if (itCycle == cycle.end()) { // Dst not in cycle, remove
+          newDst = std::nullopt;
+        } else if (itCycle + 1 == cycle.end()) { // Last DST in cycle, remove
+          newDst = std::nullopt;
+        } else { // Next dst in cycle
+          newDst = *(itCycle + 1);
+        }
+      }
+
+      if (newDst) {
+        itNode->content = Node::DST{ newDst.value() };
+        itNode->KillCache();
       } else {
-        (*itNode->content) = *(itCycle + 1);
+        nodes.erase(itNode);
       }
     } else {
-      const Node newNode = Node{ *m_hovered.point1, std::optional<int>(cycle[0]) };
-      CRect rect = DisplayNode::ComputeRect(m_pFont, newNode);
-      nodes.emplace_back(DisplayNode{ newNode, rect });
+      const Node newNode = Node{ *m_hovered.point1, Node::DST { cycle[0] } };
+      nodes.emplace_back(DisplayNode::FromNode(newNode, m_pFont));
     }
   } else {
     // Link
@@ -323,10 +379,33 @@ void DisplayLayout::OnClick() {
   }
 }
 
+bool DisplayLayout::PlaceSkill(DWORD skillId) {
+  if (!m_hovered.point1) return false;
+  if (m_hovered.point2) return false;
+
+  const auto it = std::find_if(
+    nodes.begin(), nodes.end(),
+    [&](const DisplayNode & node) { return m_hovered.IsOn(node); }
+  );
+
+  if (it != nodes.end()) {
+    it->content = Node::Skill{ skillId };
+    it->KillCache();
+  } else {
+    nodes.emplace_back(
+      DisplayNode::FromNode(
+        Node{ *m_hovered.point1, Node::Skill{ skillId } },
+        m_pFont
+      )
+    );
+  }
+  return true;
+}
+
 CRect DisplayLayout::DisplayNode::ComputeRect(CD3DFont * pFont, const Node & node) {
   const auto [text, textSize] = GetTextContent(pFont, node);
 
-  const SIZE nodeSize = node.content ? SIZE(32, 32) : (CSize(2, 2) + textSize);
+  const SIZE nodeSize = !std::holds_alternative<Node::StartNode>(node.content) ? SIZE(32, 32) : (CSize(2, 2) + textSize);
   CRect rect = CRect(CPoint(node.point.x * 64, node.point.y * 64), nodeSize);
   rect.OffsetRect(-nodeSize.cx / 2, -nodeSize.cy / 2);
   return rect;
@@ -336,12 +415,17 @@ std::pair<const char *, CSize> DisplayLayout::DisplayNode::GetTextContent(
   CD3DFont * pFont, const Node & node
 ) {
   const char * text;
-  if (node.content) {
-    if (node.content.value() == 0) return std::pair("", CSize(0, 0));
-
-    text = FindDstString(node.content.value());
-  } else {
+  
+  if (std::holds_alternative<Node::StartNode>(node.content)) {
     text = "Start";
+  } else if (std::holds_alternative<Node::Empty>(node.content)) {
+    return { "", CSize(0, 0) };
+  } else if (std::holds_alternative<Node::Skill>(node.content)) {
+    return { "", CSize(0, 0) };
+  } else if (const Node::DST * dst = std::get_if<Node::DST>(&node.content)) {
+    text = FindDstString(dst->dst);
+  } else {
+    throw std::exception(__FUNCTION__ " could not find the variant type");
   }
 
   const SIZE textSize = pFont->GetTextExtent(text);
@@ -375,8 +459,7 @@ void DisplayLayout::Render(C2DRender * p2DRender, CPoint offset) const {
   }
 
   if (!seenHoveredNode && m_hovered.point1 && !m_hovered.point2) {
-    const auto node = Node{ *m_hovered.point1, std::optional<int>(0) };
-    const auto dNode = DisplayNode{ node, DisplayNode::ComputeRect(m_pFont, node) };
+    const auto dNode = DisplayNode::FromNode(Node{ *m_hovered.point1, Node::Empty{} }, m_pFont);
     dNode.Render(p2DRender, offset, DisplayMode::ClickToCreate);
   }
 }
@@ -387,19 +470,40 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
   CRect rect = this->rect;
   rect.OffsetRect(offset);
 
-  p2DRender->RenderFillRect(rect, colors.background);
-  p2DRender->RenderRect(rect, colors.border);
 
-  if (displayMode == DisplayMode::Hovered) {
-    CRect copy = rect;
-    copy.InflateRect(1, 1);
-    p2DRender->RenderRect(copy, colors.border);
-  }
+  if (const Node::Skill * skill = std::get_if<Node::Skill>(&content)) {
+    if (!texture) {
+      const ItemProp * pSkillProp = prj.GetSkillProp(skill->skillId);
 
-  if (displayMode != DisplayMode::ClickToCreate) {
-    const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
-    CPoint where = CPoint(point.x * 64, point.y * 64) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
-    p2DRender->TextOut(where.x, where.y, text, colors.text);
+      if (!pSkillProp) {
+        texture = nullptr;
+      } else {
+        texture = CWndBase::m_textureMng.AddTexture(g_Neuz.m_pd3dDevice, MakePath(DIR_ICON, pSkillProp->szIcon), 0xffff00ff);
+      }
+    }
+
+    if (texture.value() != nullptr) {
+      const CPoint center = CPoint(point.x * 64, point.y * 64) + offset;
+      (*texture)->Render(p2DRender, center - CPoint(16, 16), CPoint(32, 32));
+    } else {
+      p2DRender->RenderFillRect(rect, colors.background - 0x00202020);
+      p2DRender->RenderRect(rect, colors.border + 0x00202020);
+    }
+  } else {
+    p2DRender->RenderFillRect(rect, colors.background);
+    p2DRender->RenderRect(rect, colors.border);
+
+    if (displayMode == DisplayMode::Hovered) {
+      CRect copy = rect;
+      copy.InflateRect(1, 1);
+      p2DRender->RenderRect(copy, colors.border);
+    }
+
+    if (displayMode != DisplayMode::ClickToCreate) {
+      const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
+      CPoint where = CPoint(point.x * 64, point.y * 64) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
+      p2DRender->TextOut(where.x, where.y, text, colors.text);
+    }
   }
 }
 
@@ -431,7 +535,7 @@ public:
   void OnRButtonDown(UINT nFlags, CPoint point) override;
   void OnMouseMove(UINT nFlags, CPoint point) override;
   void OnMButtonUp(UINT nFlags, CPoint point) override;
-
+  BOOL OnDropIcon(LPSHORTCUT pShortcut, CPoint point) override;
 
   void OnMouseWndSurface(CPoint point) override;
 
@@ -538,12 +642,15 @@ void CWndGridImpl::OnMButtonUp(UINT, CPoint) {
   m_layout.nodes = std::vector<Node>(m_displayLayout.nodes.begin(), m_displayLayout.nodes.end());
   m_layout.links = std::vector<Link>(m_displayLayout.links.begin(), m_displayLayout.links.end());
 
-  g_WndMng.PutString("Hey catch this!");
-
   const std::string json = m_layout.ToJson();
 
-  g_WndMng.PutString(json.c_str());
-  g_WndMng.PutString("Now you just have to run some OCR program on the text!");
+  if (json.size() < 250) {
+    g_WndMng.PutString("Hey catch this!");
+    g_WndMng.PutString(json.c_str());
+    g_WndMng.PutString("Now you just have to run some OCR program on the text!");
+  } else {
+    g_WndMng.PutString("JSON in clipboard");
+  }
 
   CClipboard::SetText(json.c_str());
 }
@@ -554,6 +661,24 @@ void CWndGridImpl::OnMouseWndSurface(CPoint point) {
   } else {
     m_displayLayout.SetHovered(point - m_center);
   }
+}
+
+
+
+BOOL CWndGridImpl::OnDropIcon(SHORTCUT * pShortcut, CPoint point) {
+  if (pShortcut->m_dwShortcut == ShortcutType::Skill) {
+    if (prj.GetSkillProp(pShortcut->m_dwId)) {
+      if (!m_displayLayout.PlaceSkill(pShortcut->m_dwId)) {
+        SetForbid(FALSE);
+      }
+    } else {
+      SetForbid(FALSE);
+    }
+  } else {
+    SetForbid(FALSE);
+  }
+
+  return FALSE;
 }
 
 

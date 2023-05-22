@@ -17,8 +17,7 @@ Sphere grid.
 ## TODO
 
 - Window
- - Editing tab layout
-    - Being able to place skills in layout
+  - Editing tab layout
   - Grid progression
     - Design the tab for the player
     - Users can use their stats points in the grid
