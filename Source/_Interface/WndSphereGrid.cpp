@@ -9,6 +9,7 @@
 #include "Clipboard.h"
 #include <variant>
 #include <array>
+#include <span>
 
 const char * FindDstString(int nDstParam);
 
@@ -534,9 +535,12 @@ void CWndGridImpl::OnLButtonDown(UINT nFlags, CPoint point) {
 }
 
 void CWndGridImpl::OnMButtonUp(UINT, CPoint) {
+  m_layout.nodes = std::vector<Node>(m_displayLayout.nodes.begin(), m_displayLayout.nodes.end());
+  m_layout.links = std::vector<Link>(m_displayLayout.links.begin(), m_displayLayout.links.end());
+
   g_WndMng.PutString("Hey catch this!");
 
-  std::string json = m_layout.ToJson();
+  const std::string json = m_layout.ToJson();
 
   g_WndMng.PutString(json.c_str());
   g_WndMng.PutString("Now you just have to run some OCR program on the text!");

@@ -18,7 +18,6 @@ Sphere grid.
 
 - Window
  - Editing tab layout
-    - Save the modified layout
     - Being able to place skills in layout
   - Grid progression
     - Design the tab for the player
