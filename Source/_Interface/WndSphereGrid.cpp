@@ -13,6 +13,15 @@
 
 const char * FindDstString(int nDstParam);
 
+static CPoint operator*(CPoint point, int scalar) {
+  return CPoint(point.x * scalar, point.y * scalar);
+}
+
+static CPoint operator/(CPoint point, int scalar) {
+  return CPoint(point.x / scalar, point.y / scalar);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Grid Layout
 
@@ -408,7 +417,7 @@ CRect DisplayLayout::DisplayNode::ComputeRect(CD3DFont * pFont, const Node & nod
   const auto [text, textSize] = GetTextContent(pFont, node);
 
   const SIZE nodeSize = !std::holds_alternative<Node::StartNode>(node.content) ? SIZE(32, 32) : (CSize(2, 2) + textSize);
-  CRect rect = CRect(CPoint(node.point.x * OffsetBetweenNodes, node.point.y * OffsetBetweenNodes), nodeSize);
+  CRect rect = CRect(node.point * OffsetBetweenNodes, nodeSize);
   rect.OffsetRect(-nodeSize.cx / 2, -nodeSize.cy / 2);
   return rect;
 }
@@ -485,7 +494,7 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
     }
 
     if (texture.value() != nullptr) {
-      const CPoint center = CPoint(point.x * OffsetBetweenNodes, point.y * OffsetBetweenNodes) + offset;
+      const CPoint center = point * OffsetBetweenNodes + offset;
       (*texture)->Render(p2DRender, center - CPoint(16, 16), CPoint(32, 32));
     } else {
       p2DRender->RenderFillRect(rect, colors.background - 0x00202020);
@@ -503,7 +512,7 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
 
     if (displayMode != DisplayMode::ClickToCreate) {
       const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
-      CPoint where = CPoint(point.x * OffsetBetweenNodes, point.y * OffsetBetweenNodes) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
+      CPoint where = point * OffsetBetweenNodes + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
       p2DRender->TextOut(where.x, where.y, text, colors.text);
     }
   }
@@ -512,8 +521,8 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
 void DisplayLayout::DisplayLink::Render(C2DRender * p2DRender, CPoint offset, DisplayLayout::DisplayMode displayMode) const {
   const ColorSet colors = GetColorSet(displayMode);
 
-  CPoint from = CPoint(this->from.x * OffsetBetweenNodes, this->from.y * OffsetBetweenNodes) + offset;
-  CPoint to   = CPoint(this->to.x   * OffsetBetweenNodes, this->to.y   * OffsetBetweenNodes) + offset;
+  CPoint from = this->from * OffsetBetweenNodes + offset;
+  CPoint to   = this->to   * OffsetBetweenNodes + offset;
 
   if (from.x > to.x) std::swap(from.x, to.x);
   if (from.y > to.y) std::swap(from.y, to.y);
