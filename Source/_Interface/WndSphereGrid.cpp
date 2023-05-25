@@ -177,6 +177,9 @@ struct Selection {
 };
 
 struct DisplayLayout {
+  static constexpr int SpaceBetweenNodes = 16;
+  static constexpr int OffsetBetweenNodes = 32 + SpaceBetweenNodes;
+
   enum class DisplayMode {
     Normal, Hovered, ClickToCreate
   };
@@ -286,19 +289,18 @@ void DisplayLayout::SetHovered(std::optional<CPoint> point) {
   */
 }
 
-Selection DisplayLayout::GetSelection(const CPoint point) {
+Selection DisplayLayout::GetSelection(CPoint point) {
   constexpr auto FindPositionOnAxis = [](const int value) -> std::pair<bool, int> {
-    if (value < 0) {
-      return { value & 1, (value - 1) / 2 };
-    } else {
-      return { value & 1, value / 2 };
-    }
+    const int quotient = DivideFloor(value, OffsetBetweenNodes);
+    const int rest = value - (quotient * OffsetBetweenNodes);
+
+    return { rest >= 32, quotient };
   };
 
-  CPoint topLeftPoint = CPoint(DivideFloor(16 + point.x, 32), DivideFloor(16 + point.y, 32));
+  point += CPoint(32 / 2, 32 / 2);
 
-  const auto [xOnLink, xInGridPoint] = FindPositionOnAxis(topLeftPoint.x);
-  const auto [yOnLink, yInGridPoint] = FindPositionOnAxis(topLeftPoint.y);
+  const auto [xOnLink, xInGridPoint] = FindPositionOnAxis(point.x);
+  const auto [yOnLink, yInGridPoint] = FindPositionOnAxis(point.y);
 
   CPoint inGridPoint = CPoint(xInGridPoint, yInGridPoint);
 
@@ -406,7 +408,7 @@ CRect DisplayLayout::DisplayNode::ComputeRect(CD3DFont * pFont, const Node & nod
   const auto [text, textSize] = GetTextContent(pFont, node);
 
   const SIZE nodeSize = !std::holds_alternative<Node::StartNode>(node.content) ? SIZE(32, 32) : (CSize(2, 2) + textSize);
-  CRect rect = CRect(CPoint(node.point.x * 64, node.point.y * 64), nodeSize);
+  CRect rect = CRect(CPoint(node.point.x * OffsetBetweenNodes, node.point.y * OffsetBetweenNodes), nodeSize);
   rect.OffsetRect(-nodeSize.cx / 2, -nodeSize.cy / 2);
   return rect;
 }
@@ -483,7 +485,7 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
     }
 
     if (texture.value() != nullptr) {
-      const CPoint center = CPoint(point.x * 64, point.y * 64) + offset;
+      const CPoint center = CPoint(point.x * OffsetBetweenNodes, point.y * OffsetBetweenNodes) + offset;
       (*texture)->Render(p2DRender, center - CPoint(16, 16), CPoint(32, 32));
     } else {
       p2DRender->RenderFillRect(rect, colors.background - 0x00202020);
@@ -501,7 +503,7 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
 
     if (displayMode != DisplayMode::ClickToCreate) {
       const auto [text, textSize] = GetTextContent(p2DRender->m_pFont, *this);
-      CPoint where = CPoint(point.x * 64, point.y * 64) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
+      CPoint where = CPoint(point.x * OffsetBetweenNodes, point.y * OffsetBetweenNodes) + offset - CPoint(textSize.cx / 2, textSize.cy / 2);
       p2DRender->TextOut(where.x, where.y, text, colors.text);
     }
   }
@@ -510,8 +512,8 @@ void DisplayLayout::DisplayNode::Render(C2DRender * p2DRender, CPoint offset, Di
 void DisplayLayout::DisplayLink::Render(C2DRender * p2DRender, CPoint offset, DisplayLayout::DisplayMode displayMode) const {
   const ColorSet colors = GetColorSet(displayMode);
 
-  CPoint from = CPoint(this->from.x * 64, this->from.y * 64) + offset;
-  CPoint to   = CPoint(this->to.x   * 64, this->to.y   * 64) + offset;
+  CPoint from = CPoint(this->from.x * OffsetBetweenNodes, this->from.y * OffsetBetweenNodes) + offset;
+  CPoint to   = CPoint(this->to.x   * OffsetBetweenNodes, this->to.y   * OffsetBetweenNodes) + offset;
 
   if (from.x > to.x) std::swap(from.x, to.x);
   if (from.y > to.y) std::swap(from.y, to.y);
