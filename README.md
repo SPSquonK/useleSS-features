@@ -2,6 +2,15 @@
 
 Based on [useleSS commit 5485bc6c9215aa1a230bd96ff9d141dfc0f366b3](https://github.com/SPSquonK/useleSS/tree/5485bc6c9215aa1a230bd96ff9d141dfc0f366b3).
 
+**This feature will not receive any further update**
+
+## Why this feature is discontinued
+
+- The concept was to add all stat increase and skill learning in the grid
+- Which will be a lot of nodes in the grid
+- Having a global vision of the grid may be too hard, so the system is not
+really player friendly.
+
 ## Concept
 
 - Replace the whole simple "stat increase" with a complex grid inspired by FFX
